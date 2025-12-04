@@ -1,0 +1,49 @@
+# Configuration for EEG Source Localization Transformer
+
+# Data settings
+data_dir: "../dataset_with_label"
+train_ratio: 0.8
+seed: 42
+
+# Model settings
+model:
+  type: "encoder"  # "encoder" or "encoder_decoder"
+  input_channels: 75   # EEG channels
+  output_channels: 994  # Brain regions
+  d_model: 256         # Model dimension
+  nhead: 8             # Number of attention heads
+  num_layers: 6        # Number of transformer layers (for encoder-only)
+  num_encoder_layers: 6  # For encoder-decoder
+  num_decoder_layers: 6  # For encoder-decoder
+  dim_feedforward: 1024  # Feedforward dimension
+  dropout: 0.1
+
+# Training settings
+num_epochs: 200
+batch_size: 8
+num_workers: 4
+device: "cuda"  # "cuda" or "cpu"
+
+# Optimizer settings
+optimizer:
+  type: "adamw"  # "adam" or "adamw"
+  lr: 0.0001
+  weight_decay: 0.01
+
+# Scheduler settings
+scheduler:
+  factor: 0.5      # Factor to reduce LR
+  patience: 10     # Epochs to wait before reducing LR
+
+# Training parameters
+grad_clip: 1.0
+early_stopping_patience: 30
+log_interval: 10  # Log every N batches
+
+# Directories
+checkpoint_dir: "checkpoints"
+log_dir: "logs"
+
+# Resume training (optional)
+# resume_checkpoint: "checkpoints/best_model.pth"
+
