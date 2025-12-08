@@ -186,7 +186,7 @@ def save_checkpoint(model, optimizer, epoch, train_loss, val_loss, config, filen
 
 def load_checkpoint(model, optimizer, checkpoint_path):
     """Load model checkpoint"""
-    checkpoint = torch.load(checkpoint_path)
+    checkpoint = torch.load(checkpoint_path, weights_only=False)
     model.load_state_dict(checkpoint['model_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     epoch = checkpoint['epoch']

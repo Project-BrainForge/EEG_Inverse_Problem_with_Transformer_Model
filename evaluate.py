@@ -17,7 +17,7 @@ from configs.config import Config
 
 def load_model(checkpoint_path, device):
     """Load trained model from checkpoint"""
-    checkpoint = torch.load(checkpoint_path, map_location=device)
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     
     # Get model configuration from checkpoint
     model_config = checkpoint['config']
@@ -220,7 +220,7 @@ def main():
     stats_path = os.path.join(os.path.dirname(args.checkpoint), 'normalization_stats.pt')
     stats = None
     if os.path.exists(stats_path):
-        stats = torch.load(stats_path)
+        stats = torch.load(stats_path, weights_only=False)
         print("Normalization statistics loaded")
     
     # Create dataloaders

@@ -12,7 +12,7 @@ from models.transformer_model import EEGSourceTransformerV2
 
 def load_model(checkpoint_path, device):
     """Load trained model from checkpoint"""
-    checkpoint = torch.load(checkpoint_path, map_location=device)
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
     
     # Get model configuration
     model_config = checkpoint['config']
@@ -115,7 +115,7 @@ def main():
                                   'normalization_stats.pt')
     
     if os.path.exists(stats_path):
-        stats = torch.load(stats_path)
+        stats = torch.load(stats_path, weights_only=False)
         print(f"Loaded normalization statistics from {stats_path}")
     else:
         print("Warning: No normalization statistics found. Using raw data.")

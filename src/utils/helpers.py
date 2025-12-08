@@ -99,7 +99,7 @@ def load_checkpoint(checkpoint_path, model=None, optimizer=None, scheduler=None)
     Returns:
         checkpoint: Dictionary containing checkpoint data
     """
-    checkpoint = torch.load(checkpoint_path, map_location='cpu')
+    checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
     
     if model is not None and 'model_state_dict' in checkpoint:
         model.load_state_dict(checkpoint['model_state_dict'])

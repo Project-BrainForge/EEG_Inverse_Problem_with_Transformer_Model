@@ -45,11 +45,7 @@ python train.py --config ../configs/config.yaml
 
 ```bash
 cd src
-python evaluate.py \
-    --config ../configs/config.yaml \
-    --checkpoint ../checkpoints/best_model.pth \
-    --split val \
-    --visualize
+python evaluate.py --checkpoint checkpoints/best_model.pt --data_dir dataset_with_label --visualize
 ```
 
 ---
