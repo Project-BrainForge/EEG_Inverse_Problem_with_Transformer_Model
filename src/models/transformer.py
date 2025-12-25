@@ -7,6 +7,18 @@ import torch
 import torch.nn as nn
 import math
 
+try:
+    # Try relative import (when used as module)
+    from .cnn_encoder import SpatialCNN, SpatialCNNLight
+    from ..utils.topological_converter import EEGTopologicalConverter
+except ImportError:
+    # Fall back to absolute import (when run directly)
+    import sys
+    from pathlib import Path
+    sys.path.append(str(Path(__file__).parent.parent))
+    from models.cnn_encoder import SpatialCNN, SpatialCNNLight
+    from utils.topological_converter import EEGTopologicalConverter
+
 
 class PositionalEncoding(nn.Module):
     """Positional encoding for transformer"""
@@ -40,10 +52,25 @@ class EEGTransformer(nn.Module):
     Transformer model for EEG source localization
     
     Architecture:
-    1. Linear projection from EEG channels to model dimension
+    1. Input encoding (Linear projection OR CNN spatial feature extraction)
     2. Positional encoding
     3. Transformer encoder layers
     4. Linear projection to output brain regions
+    
+    Parameters
+    ----------
+    use_cnn_encoder : bool
+        Whether to use CNN encoder for spatial feature extraction (default: False)
+    topo_image_size : int
+        Size of topological maps if using CNN encoder (default: 64)
+    electrode_file : str
+        Path to electrode configuration file (default: 'anatomy/electrode_75.mat')
+    cnn_channels : list
+        CNN channel progression (default: [32, 64, 128])
+    cnn_kernel_size : int
+        Kernel size for CNN layers (default: 3)
+    cnn_type : str
+        Type of CNN encoder: 'standard' or 'light' (default: 'standard')
     """
     
     def __init__(
@@ -55,16 +82,55 @@ class EEGTransformer(nn.Module):
         num_layers=6,           # Number of transformer layers
         dim_feedforward=1024,   # Feedforward dimension
         dropout=0.1,
-        max_seq_len=500
+        max_seq_len=500,
+        use_cnn_encoder=False,  # NEW: Use CNN instead of linear projection
+        topo_image_size=64,     # NEW: Size of topological maps
+        electrode_file='anatomy/electrode_75.mat',  # NEW: Electrode configuration
+        cnn_channels=[32, 64, 128],  # NEW: CNN channels
+        cnn_kernel_size=3,      # NEW: CNN kernel size
+        cnn_type='standard'     # NEW: CNN type
     ):
         super(EEGTransformer, self).__init__()
         
         self.input_channels = input_channels
         self.output_channels = output_channels
         self.d_model = d_model
+        self.use_cnn_encoder = use_cnn_encoder
         
-        # Input projection: (batch, seq_len, input_channels) -> (batch, seq_len, d_model)
-        self.input_projection = nn.Linear(input_channels, d_model)
+        # Input projection: Choose between linear and CNN encoder
+        if use_cnn_encoder:
+            # CNN encoder for spatial feature extraction
+            print(f"Using CNN encoder with topological maps ({topo_image_size}x{topo_image_size})")
+            
+            # Initialize topological converter (cached for efficiency)
+            self.topo_converter = EEGTopologicalConverter(
+                electrode_file=electrode_file,
+                image_size=(topo_image_size, topo_image_size),
+                sphere='auto',
+                normalize=True
+            )
+            
+            # Initialize CNN encoder
+            if cnn_type == 'light':
+                self.input_projection = SpatialCNNLight(
+                    image_size=topo_image_size,
+                    d_model=d_model,
+                    channels=cnn_channels[:2],  # Use fewer channels for light version
+                    kernel_size=cnn_kernel_size,
+                    dropout=dropout
+                )
+            else:
+                self.input_projection = SpatialCNN(
+                    image_size=topo_image_size,
+                    d_model=d_model,
+                    channels=cnn_channels,
+                    kernel_size=cnn_kernel_size,
+                    dropout=dropout
+                )
+        else:
+            # Standard linear projection
+            self.topo_converter = None
+            self.input_projection = nn.Linear(input_channels, d_model)
         
         # Positional encoding
         self.pos_encoder = PositionalEncoding(d_model, max_seq_len, dropout)
@@ -112,8 +178,16 @@ class EEGTransformer(nn.Module):
             output: Output tensor of shape (batch_size, seq_len, output_channels)
                     e.g., (batch_size, 500, 994)
         """
-        # Input projection
-        x = self.input_projection(x)  # (batch, seq_len, d_model)
+        # Input encoding: either CNN or linear projection
+        if self.use_cnn_encoder:
+            # Convert to topological maps on-the-fly
+            # Input: (batch, seq_len, channels) -> (batch, seq_len, H, W)
+            x_topo = self.topo_converter.to_torch(x, device=x.device, verbose=False)
+            # CNN feature extraction: (batch, seq_len, H, W) -> (batch, seq_len, d_model)
+            x = self.input_projection(x_topo)
+        else:
+            # Standard linear projection: (batch, seq_len, channels) -> (batch, seq_len, d_model)
+            x = self.input_projection(x)
         
         # Add positional encoding
         x = self.pos_encoder(x)
@@ -246,20 +320,57 @@ if __name__ == "__main__":
     input_channels = 75
     output_channels = 994
     
-    # Create model
-    model = EEGTransformer(
+    print("="*60)
+    print("Testing EEG Transformer Models")
+    print("="*60)
+    
+    # Test 1: Standard linear projection
+    print("\n" + "-"*60)
+    print("Test 1: Standard Linear Projection")
+    print("-"*60)
+    
+    model_linear = EEGTransformer(
         input_channels=input_channels,
         output_channels=output_channels,
         d_model=256,
         nhead=8,
-        num_layers=6
+        num_layers=6,
+        use_cnn_encoder=False
     )
     
-    # Test forward pass
     x = torch.randn(batch_size, seq_len, input_channels)
-    output = model(x)
+    output_linear = model_linear(x)
     
     print(f"Input shape: {x.shape}")
-    print(f"Output shape: {output.shape}")
-    print(f"Model parameters: {sum(p.numel() for p in model.parameters()):,}")
+    print(f"Output shape: {output_linear.shape}")
+    print(f"Model parameters: {sum(p.numel() for p in model_linear.parameters()):,}")
+    
+    # Test 2: CNN encoder
+    print("\n" + "-"*60)
+    print("Test 2: CNN Spatial Encoder")
+    print("-"*60)
+    
+    model_cnn = EEGTransformer(
+        input_channels=input_channels,
+        output_channels=output_channels,
+        d_model=256,
+        nhead=8,
+        num_layers=6,
+        use_cnn_encoder=True,
+        topo_image_size=64,
+        electrode_file='../../anatomy/electrode_75.mat',  # Adjust path for testing
+        cnn_channels=[32, 64, 128],
+        cnn_kernel_size=3,
+        cnn_type='standard'
+    )
+    
+    output_cnn = model_cnn(x)
+    
+    print(f"Input shape: {x.shape}")
+    print(f"Output shape: {output_cnn.shape}")
+    print(f"Model parameters: {sum(p.numel() for p in model_cnn.parameters()):,}")
+    
+    print("\n" + "="*60)
+    print("✓ All tests passed!")
+    print("="*60)
 

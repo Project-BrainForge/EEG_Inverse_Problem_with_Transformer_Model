@@ -20,6 +20,14 @@ class Config:
     DIM_FEEDFORWARD = 1024  # Dimension of feedforward network
     DROPOUT = 0.1  # Dropout rate
     
+    # CNN Encoder parameters (for topological spatial feature extraction)
+    USE_CNN_ENCODER = False  # Whether to use CNN encoder instead of linear projection
+    TOPO_IMAGE_SIZE = 64  # Size of topological maps (64x64)
+    ELECTRODE_FILE = "anatomy/electrode_75.mat"  # Path to electrode configuration
+    CNN_CHANNELS = [32, 64, 128]  # CNN channel progression
+    CNN_KERNEL_SIZE = 3  # Kernel size for CNN layers
+    CNN_TYPE = "standard"  # Options: "standard", "light"
+    
     # Training parameters
     BATCH_SIZE = 8
     NUM_EPOCHS = 100
