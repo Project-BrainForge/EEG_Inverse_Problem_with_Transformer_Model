@@ -8,7 +8,24 @@ class Config:
     """Configuration class for training and model parameters"""
     
     # Data parameters
-    DATA_DIR = "dataset_with_label"
+    USE_METADATA_LOADER = True  # If True, use metadata files; if False, use dynamic generation
+    
+    # For metadata-based loading (USE_METADATA_LOADER = True)
+    TRAIN_METADATA_PATH = "source/train_sample_source1.mat"
+    TEST_METADATA_PATH = "source/test_sample_source1.mat"
+    NMM_SPIKES_DIR = "source/nmm_spikes"  # Directory with a0/, a1/, etc. folders
+    FWD_MATRIX_PATH = "anatomy/leadfield_75_20k.mat"  # Path to forward matrix file
+    TRAIN_DATASET_LEN = 100  # None = use all samples from metadata
+    TEST_DATASET_LEN = 50   # None = use all samples from metadata
+    
+    # For dynamic generation (USE_METADATA_LOADER = False)
+    DATA_DIR = "."  # Root directory containing 'source/nmm_spikes'
+    DATASET_LEN = 1000  # Number of samples to generate
+    NUM_SOURCES = 2  # Number of active sources per sample
+    PATCH_SIZE = 20  # Size of each source patch
+    SNR_RANGE = (0, 30)  # SNR range in dB
+    
+    # Model parameters
     EEG_CHANNELS = 75
     SOURCE_REGIONS = 994
     SEQ_LEN = 500
@@ -33,7 +50,9 @@ class Config:
     # TEST_SPLIT = 0.1 (automatically calculated)
     
     # Training settings
-    NUM_WORKERS = 4
+    # Note: Set NUM_WORKERS = 0 on Windows to avoid multiprocessing issues
+    # On Linux/Mac, you can use 4-8 workers for faster loading
+    NUM_WORKERS = 0  # Use 0 for Windows, 4-8 for Linux/Mac
     PIN_MEMORY = True
     NORMALIZE = True
     

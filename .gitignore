@@ -62,4 +62,17 @@ Thumbs.db
 # *.mat
 
 # Checkpoints (uncomment to ignore all checkpoints)
-# checkpoints/
+checkpoints/
+
+# Logs
+logs/
+
+# Results
+results/
+
+# Dataset
+dataset_with_label/
+
+# Source
+source/
+
