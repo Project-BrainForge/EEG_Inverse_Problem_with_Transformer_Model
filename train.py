@@ -554,16 +554,29 @@ def train(config):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train EEG Source Localization Transformer')
     parser.add_argument('--data_dir', type=str, default=None, help='Path to data directory')
+    parser.add_argument('--nmm_spikes_dir', type=str, default=None, help='Path to NMM spikes directory')
+    parser.add_argument('--train_metadata', type=str, default=None, help='Path to train metadata file')
+    parser.add_argument('--test_metadata', type=str, default=None, help='Path to test metadata file')
+    parser.add_argument('--model_type', type=str, default=None, help='Model type: transformer or hybrid')
     parser.add_argument('--batch_size', type=int, default=None, help='Batch size')
     parser.add_argument('--epochs', type=int, default=None, help='Number of epochs')
     parser.add_argument('--lr', type=float, default=None, help='Learning rate')
     parser.add_argument('--resume', type=str, default=None, help='Path to checkpoint to resume from')
+    parser.add_argument('--nmm_workers', type=int, default=None, help='Number of workers for data loading')
     
     args = parser.parse_args()
     
     # Update config with command line arguments
     if args.data_dir is not None:
         Config.DATA_DIR = args.data_dir
+    if args.nmm_spikes_dir is not None:
+        Config.NMM_SPIKES_DIR = args.nmm_spikes_dir
+    if args.train_metadata is not None:
+        Config.TRAIN_METADATA_PATH = args.train_metadata
+    if args.test_metadata is not None:
+        Config.TEST_METADATA_PATH = args.test_metadata
+    if args.model_type is not None:
+        Config.MODEL_TYPE = args.model_type
     if args.batch_size is not None:
         Config.BATCH_SIZE = args.batch_size
     if args.epochs is not None:
@@ -572,7 +585,8 @@ if __name__ == "__main__":
         Config.LEARNING_RATE = args.lr
     if args.resume is not None:
         Config.RESUME_CHECKPOINT = args.resume
+    if args.nmm_workers is not None:
+        Config.NUM_WORKERS = args.nmm_workers
     
     # Start training
     train(Config)
-

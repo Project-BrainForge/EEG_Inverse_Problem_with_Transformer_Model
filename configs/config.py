@@ -15,8 +15,8 @@ class Config:
     TEST_METADATA_PATH = "source/test_sample_source.mat"
     NMM_SPIKES_DIR = "source/nmm_spikes"  # Directory with a0/, a1/, etc. folders
     FWD_MATRIX_PATH = "anatomy/leadfield_75_20k.mat"  # Path to forward matrix file
-    TRAIN_DATASET_LEN = 100  # None = use all samples from metadata
-    TEST_DATASET_LEN = 50   # None = use all samples from metadata
+    TRAIN_DATASET_LEN = None  # None = use all samples from metadata
+    TEST_DATASET_LEN = None   # None = use all samples from metadata
     
     # For dynamic generation (USE_METADATA_LOADER = False)
     DATA_DIR = "."  # Root directory containing 'source/nmm_spikes'
@@ -38,7 +38,7 @@ class Config:
     DROPOUT = 0.1  # Dropout rate
     
     # Training parameters
-    BATCH_SIZE = 8
+    BATCH_SIZE = 16
     NUM_EPOCHS = 100
     LEARNING_RATE = 1e-4
     WEIGHT_DECAY = 1e-5
@@ -66,7 +66,7 @@ class Config:
     LOG_EVERY = 10  # Log every N batches
     
     # Early stopping
-    PATIENCE = 15  # Number of epochs to wait for improvement
+    PATIENCE = 999  # Number of epochs to wait for improvement
     MIN_DELTA = 1e-4  # Minimum change to qualify as improvement
     
     # Loss function
