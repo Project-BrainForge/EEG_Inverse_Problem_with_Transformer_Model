@@ -11,8 +11,8 @@ class Config:
     USE_METADATA_LOADER = True  # If True, use metadata files; if False, use dynamic generation
     
     # For metadata-based loading (USE_METADATA_LOADER = True)
-    TRAIN_METADATA_PATH = "source/train_sample_source1.mat"
-    TEST_METADATA_PATH = "source/test_sample_source1.mat"
+    TRAIN_METADATA_PATH = "source/train_sample_source.mat"
+    TEST_METADATA_PATH = "source/test_sample_source.mat"
     NMM_SPIKES_DIR = "source/nmm_spikes"  # Directory with a0/, a1/, etc. folders
     FWD_MATRIX_PATH = "anatomy/leadfield_75_20k.mat"  # Path to forward matrix file
     TRAIN_DATASET_LEN = 100  # None = use all samples from metadata
@@ -80,6 +80,13 @@ class Config:
     
     # Resume training
     RESUME_CHECKPOINT = None  # Path to checkpoint to resume from
+
+    # Model selection and topological converter / CNN params
+    MODEL_TYPE = 'hybrid'  # 'transformer' or 'hybrid'
+    TOPO_IMAGE_SIZE = 64
+    ELECTRODE_FILE = 'anatomy/electrode_75.mat'
+    CNN_PARAMS = {"channels": [32, 64, 128], "kernel_size": 3, "dropout": 0.1}
+    CNN_OUT_DIM = None  # If None, uses D_MODEL
     
     @classmethod
     def display(cls):

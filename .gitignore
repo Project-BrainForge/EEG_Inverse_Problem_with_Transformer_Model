@@ -71,6 +71,7 @@ logs/
 results/
 
 # Dataset
+source/
 dataset_with_label/
 
 # Source

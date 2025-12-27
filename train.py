@@ -16,7 +16,7 @@ import logging
 import datetime
 import traceback
 
-from models.transformer_model import EEGSourceTransformerV2
+from models import create_model
 from utils.loader import create_dataloaders_from_metadata, create_dataloaders_from_spikes
 from configs.config import Config
 
@@ -394,18 +394,11 @@ def train(config):
             print("Normalization statistics saved")
             logger.info("Normalization statistics saved")
         
-        # Create model
+        # Create model via factory (supports 'transformer' or 'hybrid')
         print("\nInitializing model...")
         logger.info("Initializing model...")
-        model = EEGSourceTransformerV2(
-            eeg_channels=config.EEG_CHANNELS,
-            source_regions=config.SOURCE_REGIONS,
-            d_model=config.D_MODEL,
-            nhead=config.NHEAD,
-            num_layers=config.NUM_LAYERS,
-            dim_feedforward=config.DIM_FEEDFORWARD,
-            dropout=config.DROPOUT
-        ).to(config.DEVICE)
+        model = create_model(getattr(config, 'MODEL_TYPE', 'transformer'), config).to(config.DEVICE)
+        logger.info(f"Model type: {getattr(config, 'MODEL_TYPE', 'transformer')}")
         
         # Count parameters
         num_params = sum(p.numel() for p in model.parameters())
