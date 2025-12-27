@@ -32,6 +32,19 @@ export const runPrediction = async (subject, checkpoint = 'checkpoints/best_mode
   return response.data;
 };
 
+export const uploadAndPredict = async (file, checkpoint = 'checkpoints/best_model.pt', normalize = true) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const response = await api.post('/api/upload-and-predict', formData, {
+    params: { checkpoint, normalize },
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
 export const healthCheck = async () => {
   const response = await api.get('/api/health');
   return response.data;

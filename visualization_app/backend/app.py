@@ -6,11 +6,13 @@ import os
 from pathlib import Path
 from typing import List, Optional
 import numpy as np
-from scipy.io import loadmat
-from fastapi import FastAPI, HTTPException, Query
+from scipy.io import loadmat, savemat
+from fastapi import FastAPI, HTTPException, Query, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import torch
+import tempfile
+import shutil
 
 # Add parent directory to path
 import sys
@@ -70,6 +72,7 @@ def load_cortex_mesh():
     """Load cortex mesh data"""
     global CORTEX_DATA
     
+    print("CORTEX_DATA is", CORTEX_DATA)
     if CORTEX_DATA is not None:
         return CORTEX_DATA
     
@@ -79,8 +82,11 @@ def load_cortex_mesh():
         raise HTTPException(status_code=404, detail="Cortex mesh file not found")
     
     try:
+
+        print("Loading cortex mesh...")
         mat_data = loadmat(str(cortex_path))
-        
+
+        print("mat_data is", mat_data)
         # Extract vertices and faces
         vertices = mat_data['pos']  # Should be (N, 3)
         faces = mat_data['tri'] - 1  # MATLAB uses 1-based indexing
@@ -104,7 +110,17 @@ def load_model(checkpoint_path: str):
     if MODEL is not None:
         return MODEL
     
+    print("Loading model...")
+    print("checkpoint_path input:", checkpoint_path)
+    
+    # Convert to Path and resolve relative to BASE_DIR
     checkpoint_path = Path(checkpoint_path)
+    if not checkpoint_path.is_absolute():
+        checkpoint_path = BASE_DIR / checkpoint_path
+    
+    print("Resolved checkpoint_path:", checkpoint_path)
+    print("File exists:", checkpoint_path.exists())
+
     if not checkpoint_path.exists():
         raise HTTPException(status_code=404, detail=f"Checkpoint not found: {checkpoint_path}")
     
@@ -403,6 +419,165 @@ async def predict_subject(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error during prediction: {str(e)}")
+
+
+@app.post("/api/upload-and-predict")
+async def upload_and_predict(
+    file: UploadFile = File(...),
+    checkpoint: str = Query("checkpoints\best_model.pt", description="Path to model checkpoint"),
+    normalize: bool = Query(True, description="Normalize input data")
+):
+    """
+    Upload a MAT file with EEG data and get predictions
+    Saves the file to VEP folder and generates predictions
+    
+    Expected MAT file format:
+    - 'data' or 'eeg_data' or 'eeg': (time_points, channels) array
+    - Should have 75 channels and any number of time points
+    """
+    
+    # Verify file is a MAT file
+    if not file.filename.endswith('.mat'):
+        raise HTTPException(status_code=400, detail="File must be a .mat file")
+    
+    # Create VEP folder if it doesn't exist
+    vep_folder = SOURCE_DIR / "VEP"
+    vep_folder.mkdir(parents=True, exist_ok=True)
+    
+    # Save uploaded file to VEP folder
+    uploaded_file_path = vep_folder / file.filename
+    temp_file = None
+    
+    try:
+        # Save to VEP folder
+        with open(uploaded_file_path, 'wb') as f:
+            shutil.copyfileobj(file.file, f)
+        
+        print(f"Saved uploaded file to: {uploaded_file_path}")
+        temp_file_path = uploaded_file_path
+        
+        # Load the MAT file
+        mat_data = loadmat(temp_file_path)
+        
+        # Try different field names for EEG data
+        data = None
+        for key in ['data', 'eeg_data', 'eeg', 'EEG']:
+            if key in mat_data:
+                data = mat_data[key]
+                break
+        
+        if data is None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Could not find EEG data. Expected one of: 'data', 'eeg_data', 'eeg', 'EEG'. Found: {list(mat_data.keys())}"
+            )
+        
+        # Ensure correct shape (time, channels)
+        if data.shape[1] == 75 and data.shape[0] != 75:
+            pass  # Already correct
+        elif data.shape[0] == 75 and data.shape[1] != 75:
+            data = data.T  # Transpose
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Expected data with 75 channels. Got shape: {data.shape}"
+            )
+        
+        print(f"Loaded uploaded file: {data.shape}")
+        
+        # Ensure 500 time points (or use what's available)
+        original_time_points = data.shape[0]
+        print("original_time_points is", original_time_points)
+        if data.shape[0] != 500:
+            if data.shape[0] > 500:
+                data = data[:500, :]
+                print(f"Truncated from {original_time_points} to 500 time points")
+            else:
+                # Pad with zeros
+                padded = np.zeros((500, data.shape[1]))
+                padded[:data.shape[0], :] = data
+                data = padded
+                print(f"Padded from {original_time_points} to 500 time points")
+        
+        # Preprocess
+        print("Preprocessing data...")
+        data = data - np.mean(data, axis=0, keepdims=True)
+        data = data - np.mean(data, axis=1, keepdims=True)
+        print("Data preprocessed")
+
+        print("Normalizing data...")
+        if normalize:
+            max_val = np.max(np.abs(data))
+            if max_val > 0:
+                data = data / max_val
+        print("Data normalized")
+        # Load model
+        print("Loading model...")
+        model = load_model(checkpoint)
+        print("Model loaded")
+        # Convert to tensor and run inference
+        # Add batch dimension: (1, time_points, channels)
+        data_tensor = torch.from_numpy(data[np.newaxis, :, :]).to(DEVICE, torch.float)
+        
+        print(f"Running inference on data shape: {data_tensor.shape}")
+        
+        with torch.no_grad():
+            predictions = model(data_tensor)
+            all_out = predictions.cpu().numpy()
+        
+        print(f"Predictions shape: {all_out.shape}")
+        
+        # Handle different output shapes
+        if len(all_out.shape) == 3:
+            # Format: (batch, time_points, sources)
+            batch_size, time_points, num_sources = all_out.shape
+            # Reshape to (time_points, num_sources) for visualization
+            all_out = all_out.reshape(-1, num_sources)
+            print(f"Reshaped predictions to: {all_out.shape}")
+        
+        # Save predictions to VEP folder
+        pred_filename = f"transformer_predictions_{file.filename.replace('.mat', '')}_uploaded.mat"
+        pred_file_path = vep_folder / pred_filename
+        
+        savemat(str(pred_file_path), {
+            'all_out': all_out,
+            'file_names': [file.filename],
+            'checkpoint': checkpoint,
+            'num_samples': all_out.shape[0],
+            'uploaded_file': str(uploaded_file_path)
+        })
+        
+        print(f"Saved predictions to: {pred_file_path}")
+        
+        # Calculate statistics
+        stats = {
+            "min": float(np.min(all_out)),
+            "max": float(np.max(all_out)),
+            "mean": float(np.mean(all_out)),
+            "std": float(np.std(all_out))
+        }
+        
+        return PredictionResponse(
+            predictions=all_out.tolist(),
+            num_samples=all_out.shape[0],
+            num_sources=all_out.shape[1],
+            file_names=[file.filename],
+            statistics=stats
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        error_details = f"Error processing file: {str(e)}\n{traceback.format_exc()}"
+        print(error_details)
+        # Clean up uploaded file on error
+        if uploaded_file_path.exists():
+            try:
+                os.unlink(uploaded_file_path)
+            except:
+                pass
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
 
 @app.get("/api/health")
