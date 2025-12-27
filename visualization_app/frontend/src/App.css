@@ -1,0 +1,130 @@
+.App {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+}
+
+.App-header {
+  background: linear-gradient(90deg, #16213e 0%, #0f3460 100%);
+  padding: 1.5rem 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  border-bottom: 2px solid #e94560;
+}
+
+.App-header h1 {
+  margin: 0;
+  font-size: 2rem;
+  color: #ffffff;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.App-header p {
+  margin: 0.5rem 0 0 0;
+  font-size: 1rem;
+  color: #a8b2d1;
+}
+
+.App-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.left-panel {
+  width: 350px;
+  background: rgba(22, 33, 62, 0.8);
+  backdrop-filter: blur(10px);
+  padding: 1.5rem;
+  overflow-y: auto;
+  border-right: 1px solid rgba(233, 69, 96, 0.3);
+  box-shadow: 4px 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.visualization-container {
+  flex: 1;
+  position: relative;
+  background: radial-gradient(ellipse at center, #1a1a2e 0%, #0a0a0a 100%);
+}
+
+.error-message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(233, 69, 96, 0.9);
+  padding: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(233, 69, 96, 0.5);
+  z-index: 100;
+}
+
+.error-message p {
+  margin: 0;
+  font-size: 1.1rem;
+  color: white;
+}
+
+.loading-message {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 100;
+}
+
+.loading-message p {
+  margin-top: 1rem;
+  font-size: 1.2rem;
+  color: #a8b2d1;
+}
+
+.spinner {
+  border: 4px solid rgba(233, 69, 96, 0.3);
+  border-top: 4px solid #e94560;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Scrollbar styling */
+.left-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.left-panel::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.left-panel::-webkit-scrollbar-thumb {
+  background: rgba(233, 69, 96, 0.5);
+  border-radius: 4px;
+}
+
+.left-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(233, 69, 96, 0.7);
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+  .App-content {
+    flex-direction: column;
+  }
+
+  .left-panel {
+    width: 100%;
+    max-height: 300px;
+    border-right: none;
+    border-bottom: 1px solid rgba(233, 69, 96, 0.3);
+  }
+}
+
