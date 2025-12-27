@@ -563,6 +563,8 @@ if __name__ == "__main__":
     parser.add_argument('--lr', type=float, default=None, help='Learning rate')
     parser.add_argument('--resume', type=str, default=None, help='Path to checkpoint to resume from')
     parser.add_argument('--nmm_workers', type=int, default=None, help='Number of workers for data loading')
+    parser.add_argument('--save_every', type=int, default=None, help='Save checkpoint every N epochs')
+    parser.add_argument('--patience', type=int, default=None, help='Early stopping patience')
     
     args = parser.parse_args()
     
@@ -587,6 +589,10 @@ if __name__ == "__main__":
         Config.RESUME_CHECKPOINT = args.resume
     if args.nmm_workers is not None:
         Config.NUM_WORKERS = args.nmm_workers
+    if args.save_every is not None:
+        Config.SAVE_EVERY = args.save_every
+    if args.patience is not None:
+        Config.PATIENCE = args.patience
     
     # Start training
     train(Config)
