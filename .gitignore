@@ -58,7 +58,7 @@ results/
 Thumbs.db
 
 # Data (uncomment if you don't want to track dataset)
-# dataset_with_label/
+dataset_with_label/
 # *.mat
 
 # Checkpoints (uncomment to ignore all checkpoints)
