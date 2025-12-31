@@ -95,10 +95,14 @@ class EEGSourceTransformer(nn.Module):
         self._init_weights()
     
     def _init_weights(self):
-        """Initialize weights using Xavier initialization"""
-        for p in self.parameters():
+        """Initialize weights using Xavier initialization with conservative scaling"""
+        for name, p in self.named_parameters():
             if p.dim() > 1:
-                nn.init.xavier_uniform_(p)
+                # Use Xavier initialization with gain for better stability
+                nn.init.xavier_uniform_(p, gain=0.5)
+            elif p.dim() == 1 and 'bias' in name:
+                # Initialize biases to zero
+                nn.init.zeros_(p)
     
     def forward(self, eeg_data: torch.Tensor, target_source: torch.Tensor = None) -> torch.Tensor:
         """
@@ -209,9 +213,10 @@ class EEGSourceTransformerV2(nn.Module):
             num_layers=num_layers
         )
         
-        # Output projection
+        # Output projection with layer normalization for stability
         self.output_projection = nn.Sequential(
             nn.Linear(d_model, dim_feedforward),
+            nn.LayerNorm(dim_feedforward),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(dim_feedforward, source_regions)
@@ -221,14 +226,18 @@ class EEGSourceTransformerV2(nn.Module):
         self._init_weights()
     
     def _init_weights(self):
-        """Initialize weights using Xavier initialization"""
-        for p in self.parameters():
+        """Initialize weights using Xavier initialization with conservative scaling"""
+        for name, p in self.named_parameters():
             if p.dim() > 1:
-                nn.init.xavier_uniform_(p)
+                # Use Xavier initialization with gain for better stability
+                nn.init.xavier_uniform_(p, gain=0.5)
+            elif p.dim() == 1 and 'bias' in name:
+                # Initialize biases to zero
+                nn.init.zeros_(p)
     
     def forward(self, eeg_data: torch.Tensor) -> torch.Tensor:
         """
-        Forward pass
+        Forward pass with numerical stability checks
         
         Args:
             eeg_data: Input EEG data of shape (batch_size, seq_len, eeg_channels)
@@ -236,6 +245,9 @@ class EEGSourceTransformerV2(nn.Module):
         Returns:
             predicted_source: Predicted source data of shape (batch_size, seq_len, source_regions)
         """
+        # Clamp input to prevent extreme values
+        eeg_data = torch.clamp(eeg_data, min=-10, max=10)
+        
         # Project input to model dimension
         # (batch_size, seq_len, eeg_channels) -> (batch_size, seq_len, d_model)
         x = self.input_projection(eeg_data)

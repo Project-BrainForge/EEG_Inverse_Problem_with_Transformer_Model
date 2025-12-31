@@ -23,7 +23,7 @@ class Config:
     # Training parameters
     BATCH_SIZE = 8
     NUM_EPOCHS = 100
-    LEARNING_RATE = 1e-4
+    LEARNING_RATE = 5e-5  # Reduced from 1e-4 for better stability
     WEIGHT_DECAY = 1e-5
     WARMUP_EPOCHS = 5
     

@@ -64,6 +64,15 @@ def get_loss_function(loss_fn_name: str):
         raise ValueError(f"Unknown loss function: {loss_fn_name}")
 
 
+def check_for_nan_inf(tensor, name="tensor"):
+    """Check if tensor contains NaN or Inf values"""
+    if torch.isnan(tensor).any():
+        return f"{name} contains NaN"
+    if torch.isinf(tensor).any():
+        return f"{name} contains Inf"
+    return None
+
+
 def train_epoch(model, train_loader, criterion, optimizer, scaler, device, config, epoch):
     """Train for one epoch"""
     model.train()
@@ -77,6 +86,17 @@ def train_epoch(model, train_loader, criterion, optimizer, scaler, device, confi
         eeg_data = eeg_data.to(device)
         source_data = source_data.to(device)
         
+        # Check input data for NaN/Inf
+        error = check_for_nan_inf(eeg_data, "EEG data")
+        if error:
+            print(f"\nERROR: {error} in batch {batch_idx}")
+            return float('nan')
+        
+        error = check_for_nan_inf(source_data, "Source data")
+        if error:
+            print(f"\nERROR: {error} in batch {batch_idx}")
+            return float('nan')
+        
         # Zero gradients
         optimizer.zero_grad()
         
@@ -84,26 +104,89 @@ def train_epoch(model, train_loader, criterion, optimizer, scaler, device, confi
         if config.USE_AMP:
             with autocast():
                 predictions = model(eeg_data)
+                
+                # Check predictions for NaN/Inf
+                error = check_for_nan_inf(predictions, "Predictions")
+                if error:
+                    print(f"\nERROR: {error} in batch {batch_idx}")
+                    print(f"  Input stats - mean: {eeg_data.mean():.6f}, std: {eeg_data.std():.6f}")
+                    print(f"  Input range: [{eeg_data.min():.6f}, {eeg_data.max():.6f}]")
+                    return float('nan')
+                
                 loss = criterion(predictions, source_data)
+            
+            # Check if loss is valid
+            if torch.isnan(loss) or torch.isinf(loss):
+                print(f"\nERROR: Loss is {'NaN' if torch.isnan(loss) else 'Inf'} in batch {batch_idx}")
+                return float('nan')
             
             # Backward pass with gradient scaling
             scaler.scale(loss).backward()
             
+            # Check gradients for NaN/Inf before clipping
+            has_nan_grad = False
+            for name, param in model.named_parameters():
+                if param.grad is not None:
+                    error = check_for_nan_inf(param.grad, f"Gradient of {name}")
+                    if error:
+                        print(f"\nERROR: {error}")
+                        has_nan_grad = True
+                        break
+            
+            if has_nan_grad:
+                return float('nan')
+            
             # Gradient clipping
             if config.CLIP_GRAD_NORM > 0:
                 scaler.unscale_(optimizer)
-                torch.nn.utils.clip_grad_norm_(model.parameters(), config.CLIP_GRAD_NORM)
+                grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), config.CLIP_GRAD_NORM)
+                
+                # Check if gradient norm is too large
+                if grad_norm > 100 * config.CLIP_GRAD_NORM:
+                    print(f"\nWARNING: Very large gradient norm: {grad_norm:.2f} (threshold: {config.CLIP_GRAD_NORM})")
             
             scaler.step(optimizer)
             scaler.update()
         else:
             predictions = model(eeg_data)
+            
+            # Check predictions for NaN/Inf
+            error = check_for_nan_inf(predictions, "Predictions")
+            if error:
+                print(f"\nERROR: {error} in batch {batch_idx}")
+                print(f"  Input stats - mean: {eeg_data.mean():.6f}, std: {eeg_data.std():.6f}")
+                print(f"  Input range: [{eeg_data.min():.6f}, {eeg_data.max():.6f}]")
+                return float('nan')
+            
             loss = criterion(predictions, source_data)
+            
+            # Check if loss is valid
+            if torch.isnan(loss) or torch.isinf(loss):
+                print(f"\nERROR: Loss is {'NaN' if torch.isnan(loss) else 'Inf'} in batch {batch_idx}")
+                return float('nan')
+            
             loss.backward()
+            
+            # Check gradients for NaN/Inf before clipping
+            has_nan_grad = False
+            for name, param in model.named_parameters():
+                if param.grad is not None:
+                    error = check_for_nan_inf(param.grad, f"Gradient of {name}")
+                    if error:
+                        print(f"\nERROR: {error}")
+                        has_nan_grad = True
+                        break
+            
+            if has_nan_grad:
+                return float('nan')
             
             # Gradient clipping
             if config.CLIP_GRAD_NORM > 0:
-                torch.nn.utils.clip_grad_norm_(model.parameters(), config.CLIP_GRAD_NORM)
+                grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), config.CLIP_GRAD_NORM)
+                
+                # Check if gradient norm is too large
+                if grad_norm > 100 * config.CLIP_GRAD_NORM:
+                    print(f"\nWARNING: Very large gradient norm: {grad_norm:.2f} (threshold: {config.CLIP_GRAD_NORM})")
             
             optimizer.step()
         
@@ -160,7 +243,31 @@ def validate(model, val_loader, criterion, device, config, epoch):
 
 
 def save_checkpoint(model, optimizer, epoch, train_loss, val_loss, config, filename):
-    """Save model checkpoint"""
+    """Save model checkpoint with validation"""
+    # Check if losses contain NaN or Inf
+    if np.isnan(train_loss) or np.isinf(train_loss):
+        print(f"WARNING: Not saving checkpoint - train_loss is {'NaN' if np.isnan(train_loss) else 'Inf'}")
+        return False
+    
+    if np.isnan(val_loss) or np.isinf(val_loss):
+        print(f"WARNING: Not saving checkpoint - val_loss is {'NaN' if np.isnan(val_loss) else 'Inf'}")
+        return False
+    
+    # Check if model weights contain NaN or Inf
+    has_nan_or_inf = False
+    for name, param in model.named_parameters():
+        if torch.isnan(param).any():
+            print(f"WARNING: Parameter '{name}' contains NaN - not saving checkpoint")
+            has_nan_or_inf = True
+            break
+        if torch.isinf(param).any():
+            print(f"WARNING: Parameter '{name}' contains Inf - not saving checkpoint")
+            has_nan_or_inf = True
+            break
+    
+    if has_nan_or_inf:
+        return False
+    
     checkpoint = {
         'epoch': epoch,
         'model_state_dict': model.state_dict(),
@@ -182,6 +289,7 @@ def save_checkpoint(model, optimizer, epoch, train_loss, val_loss, config, filen
     filepath = os.path.join(config.CHECKPOINT_DIR, filename)
     torch.save(checkpoint, filepath)
     print(f"Checkpoint saved: {filepath}")
+    return True
 
 
 def load_checkpoint(model, optimizer, checkpoint_path):
@@ -287,8 +395,24 @@ def train(config):
         train_loss = train_epoch(model, train_loader, criterion, optimizer, scaler, 
                                 config.DEVICE, config, epoch)
         
+        # Check if training produced NaN
+        if np.isnan(train_loss) or np.isinf(train_loss):
+            print(f"\n{'='*60}")
+            print(f"CRITICAL ERROR: Training produced {'NaN' if np.isnan(train_loss) else 'Inf'} loss!")
+            print(f"Training stopped at epoch {epoch+1}")
+            print(f"{'='*60}")
+            break
+        
         # Validate
         val_loss, val_mae = validate(model, val_loader, criterion, config.DEVICE, config, epoch)
+        
+        # Check if validation produced NaN
+        if np.isnan(val_loss) or np.isinf(val_loss):
+            print(f"\n{'='*60}")
+            print(f"CRITICAL ERROR: Validation produced {'NaN' if np.isnan(val_loss) else 'Inf'} loss!")
+            print(f"Training stopped at epoch {epoch+1}")
+            print(f"{'='*60}")
+            break
         
         # Update learning rate
         scheduler.step()
@@ -306,13 +430,15 @@ def train(config):
               f"Train Loss: {train_loss:.6f}, Val Loss: {val_loss:.6f}, "
               f"Val MAE: {val_mae:.6f}, LR: {current_lr:.6f}, Time: {epoch_time:.2f}s")
         
-        # Save best model
+        # Save best model (only if not NaN/Inf)
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            save_checkpoint(model, optimizer, epoch, train_loss, val_loss, 
-                          config, 'best_model.pt')
+            saved = save_checkpoint(model, optimizer, epoch, train_loss, val_loss, 
+                                  config, 'best_model.pt')
+            if saved:
+                print(f"New best model saved! Val Loss: {val_loss:.6f}")
         
-        # Save periodic checkpoint
+        # Save periodic checkpoint (only if not NaN/Inf)
         if (epoch + 1) % config.SAVE_EVERY == 0:
             save_checkpoint(model, optimizer, epoch, train_loss, val_loss, 
                           config, f'checkpoint_epoch_{epoch+1}.pt')
