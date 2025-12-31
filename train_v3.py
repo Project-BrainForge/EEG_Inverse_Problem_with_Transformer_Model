@@ -1,6 +1,6 @@
 """
-Optimized Training script with advanced features for better performance
-Uses GPU optimization, better learning rate scheduling, and EMA
+Training script using Enhanced Transformer V3 Model
+This is the same as train_optimized.py but uses the V3 model architecture
 """
 import os
 import sys
@@ -14,14 +14,15 @@ import numpy as np
 from tqdm import tqdm
 import argparse
 
-from models.transformer_model import EEGSourceTransformerV2
+# Import V3 model instead of V2
+from models.transformer_model_v3 import EEGSourceTransformerV3, EEGSourceTransformerV3Large, EEGSourceTransformerV3Small
 from utils.dataset import create_dataloaders
 from configs.config_gpu_optimized import ConfigGPUOptimized, ConfigBalanced
 from configs.config_conservative import ConfigConservative
 
 
 class ModelEMA:
-    """Exponential Moving Average of model parameters for more stable predictions"""
+    """Exponential Moving Average of model parameters"""
     
     def __init__(self, model, decay=0.999):
         self.model = model
@@ -29,26 +30,22 @@ class ModelEMA:
         self.shadow = {}
         self.backup = {}
         
-        # Initialize shadow parameters
         for name, param in model.named_parameters():
             if param.requires_grad:
                 self.shadow[name] = param.data.clone()
     
     def update(self, model):
-        """Update shadow parameters"""
         for name, param in model.named_parameters():
             if param.requires_grad:
                 self.shadow[name] = self.decay * self.shadow[name] + (1.0 - self.decay) * param.data
     
     def apply_shadow(self):
-        """Apply shadow parameters to model"""
         for name, param in self.model.named_parameters():
             if param.requires_grad:
                 self.backup[name] = param.data.clone()
                 param.data = self.shadow[name]
     
     def restore(self):
-        """Restore original parameters"""
         for name, param in self.model.named_parameters():
             if param.requires_grad:
                 param.data = self.backup[name]
@@ -111,7 +108,7 @@ def check_for_nan_inf(tensor, name="tensor"):
 
 
 def train_epoch(model, train_loader, criterion, optimizer, scaler, device, config, epoch, ema=None):
-    """Train for one epoch with improved monitoring"""
+    """Train for one epoch"""
     model.train()
     total_loss = 0
     num_batches = len(train_loader)
@@ -119,11 +116,9 @@ def train_epoch(model, train_loader, criterion, optimizer, scaler, device, confi
     pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{config.NUM_EPOCHS} [Train]")
     
     for batch_idx, (eeg_data, source_data) in enumerate(pbar):
-        # Move data to device
         eeg_data = eeg_data.to(device, non_blocking=True)
         source_data = source_data.to(device, non_blocking=True)
         
-        # Check input data for NaN/Inf
         error = check_for_nan_inf(eeg_data, "EEG data")
         if error:
             print(f"\nERROR: {error} in batch {batch_idx}")
@@ -134,15 +129,12 @@ def train_epoch(model, train_loader, criterion, optimizer, scaler, device, confi
             print(f"\nERROR: {error} in batch {batch_idx}")
             return float('nan')
         
-        # Zero gradients
-        optimizer.zero_grad(set_to_none=True)  # More efficient than zero_grad()
+        optimizer.zero_grad(set_to_none=True)
         
-        # Forward pass with mixed precision
         if config.USE_AMP:
             with autocast():
                 predictions = model(eeg_data)
                 
-                # Check predictions for NaN/Inf
                 error = check_for_nan_inf(predictions, "Predictions")
                 if error:
                     print(f"\nERROR: {error} in batch {batch_idx}")
@@ -150,20 +142,16 @@ def train_epoch(model, train_loader, criterion, optimizer, scaler, device, confi
                 
                 loss = criterion(predictions, source_data)
             
-            # Check if loss is valid
             if torch.isnan(loss) or torch.isinf(loss):
                 print(f"\nERROR: Loss is {'NaN' if torch.isnan(loss) else 'Inf'} in batch {batch_idx}")
                 return float('nan')
             
-            # Backward pass with gradient scaling
             scaler.scale(loss).backward()
             
-            # Gradient clipping
             if config.CLIP_GRAD_NORM > 0:
                 scaler.unscale_(optimizer)
                 grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), config.CLIP_GRAD_NORM)
                 
-                # Check if gradient norm is too large
                 if grad_norm > 100 * config.CLIP_GRAD_NORM:
                     print(f"\nWARNING: Very large gradient norm: {grad_norm:.2f}")
             
@@ -190,15 +178,12 @@ def train_epoch(model, train_loader, criterion, optimizer, scaler, device, confi
             
             optimizer.step()
         
-        # Update EMA if enabled
         if ema is not None:
             ema.update(model)
         
-        # Update metrics
         total_loss += loss.item()
         avg_loss = total_loss / (batch_idx + 1)
         
-        # Update progress bar
         pbar.set_postfix({'loss': f'{avg_loss:.6f}', 'lr': f'{optimizer.param_groups[0]["lr"]:.2e}'})
     
     return total_loss / num_batches
@@ -215,11 +200,9 @@ def validate(model, val_loader, criterion, device, config, epoch):
     
     with torch.no_grad():
         for eeg_data, source_data in pbar:
-            # Move data to device
             eeg_data = eeg_data.to(device, non_blocking=True)
             source_data = source_data.to(device, non_blocking=True)
             
-            # Forward pass
             if config.USE_AMP:
                 with autocast():
                     predictions = model(eeg_data)
@@ -228,14 +211,11 @@ def validate(model, val_loader, criterion, device, config, epoch):
                 predictions = model(eeg_data)
                 loss = criterion(predictions, source_data)
             
-            # Calculate MAE for additional metric
             mae = torch.mean(torch.abs(predictions - source_data))
             
-            # Update metrics
             total_loss += loss.item()
             total_mae += mae.item()
             
-            # Update progress bar
             avg_loss = total_loss / (pbar.n + 1)
             avg_mae = total_mae / (pbar.n + 1)
             pbar.set_postfix({'loss': f'{avg_loss:.6f}', 'mae': f'{avg_mae:.6f}'})
@@ -248,7 +228,6 @@ def validate(model, val_loader, criterion, device, config, epoch):
 
 def save_checkpoint(model, optimizer, scheduler, epoch, train_loss, val_loss, config, filename, ema=None):
     """Save model checkpoint with validation"""
-    # Check if losses contain NaN or Inf
     if np.isnan(train_loss) or np.isinf(train_loss):
         print(f"WARNING: Not saving checkpoint - train_loss is {'NaN' if np.isnan(train_loss) else 'Inf'}")
         return False
@@ -257,7 +236,6 @@ def save_checkpoint(model, optimizer, scheduler, epoch, train_loss, val_loss, co
         print(f"WARNING: Not saving checkpoint - val_loss is {'NaN' if np.isnan(val_loss) else 'Inf'}")
         return False
     
-    # Check if model weights contain NaN or Inf
     has_nan_or_inf = False
     for name, param in model.named_parameters():
         if torch.isnan(param).any() or torch.isinf(param).any():
@@ -286,7 +264,6 @@ def save_checkpoint(model, optimizer, scheduler, epoch, train_loss, val_loss, co
         }
     }
     
-    # Add EMA state if available
     if ema is not None:
         checkpoint['ema_shadow'] = ema.shadow
     
@@ -297,8 +274,8 @@ def save_checkpoint(model, optimizer, scheduler, epoch, train_loss, val_loss, co
     return True
 
 
-def train(config):
-    """Main training function with optimizations"""
+def train(config, model_size='default'):
+    """Main training function with V3 model"""
     
     # Set up GPU optimizations
     if config.DEVICE.type == 'cuda':
@@ -306,25 +283,27 @@ def train(config):
             torch.backends.cudnn.benchmark = True
         
         if hasattr(config, 'TF32_ALLOW') and config.TF32_ALLOW:
-            # Enable TF32 for better performance on Ampere GPUs
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.backends.cudnn.allow_tf32 = True
     
     # Display configuration and GPU info
     if hasattr(config, 'verify_gpu'):
         config.verify_gpu()
+    
+    print("\n" + "=" * 70)
+    print(f"Using Enhanced Transformer V3 Model ({model_size.upper()})")
+    print("=" * 70)
+    
     config.display()
     
-    # Set random seed for reproducibility
+    # Set random seed
     torch.manual_seed(42)
     np.random.seed(42)
     if config.DEVICE.type == 'cuda':
         torch.cuda.manual_seed_all(42)
     
-    # Create dataloaders with optimized settings
+    # Create dataloaders
     print("\nLoading datasets...")
-    
-    # Get dataloader kwargs
     dataloader_kwargs = {
         'data_dir': config.DATA_DIR,
         'batch_size': config.BATCH_SIZE,
@@ -342,25 +321,37 @@ def train(config):
         torch.save(stats, os.path.join(config.CHECKPOINT_DIR, 'normalization_stats.pt'))
         print("✓ Normalization statistics saved")
     
-    # Create model
-    print("\nInitializing model...")
-    model = EEGSourceTransformerV2(
-        eeg_channels=config.EEG_CHANNELS,
-        source_regions=config.SOURCE_REGIONS,
-        d_model=config.D_MODEL,
-        nhead=config.NHEAD,
-        num_layers=config.NUM_LAYERS,
-        dim_feedforward=config.DIM_FEEDFORWARD,
-        dropout=config.DROPOUT
-    ).to(config.DEVICE)
+    # Create V3 model based on size
+    print("\nInitializing Enhanced V3 model...")
+    if model_size == 'small':
+        model = EEGSourceTransformerV3Small(
+            eeg_channels=config.EEG_CHANNELS,
+            source_regions=config.SOURCE_REGIONS
+        ).to(config.DEVICE)
+    elif model_size == 'large':
+        model = EEGSourceTransformerV3Large(
+            eeg_channels=config.EEG_CHANNELS,
+            source_regions=config.SOURCE_REGIONS
+        ).to(config.DEVICE)
+    else:  # default
+        model = EEGSourceTransformerV3(
+            eeg_channels=config.EEG_CHANNELS,
+            source_regions=config.SOURCE_REGIONS,
+            d_model=config.D_MODEL,
+            nhead=config.NHEAD,
+            num_layers=config.NUM_LAYERS,
+            dim_feedforward=config.DIM_FEEDFORWARD,
+            dropout=config.DROPOUT
+        ).to(config.DEVICE)
     
     # Count parameters
     num_params = sum(p.numel() for p in model.parameters())
     num_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"✓ Total parameters: {num_params:,}")
     print(f"✓ Trainable parameters: {num_trainable_params:,}")
+    print(f"✓ Model features: Pre-LayerNorm, GELU, Skip Connections")
     
-    # Initialize EMA if enabled
+    # Initialize EMA
     ema = None
     if hasattr(config, 'USE_EMA') and config.USE_EMA:
         ema = ModelEMA(model, decay=config.EMA_DECAY)
@@ -386,7 +377,6 @@ def train(config):
         )
         print(f"✓ Using CosineAnnealingWarmRestarts scheduler")
     else:
-        # Fallback to cosine annealing with warmup
         def lr_lambda(epoch):
             if epoch < config.WARMUP_EPOCHS:
                 return (epoch + 1) / config.WARMUP_EPOCHS
@@ -409,7 +399,7 @@ def train(config):
     
     # Training loop
     print("\n" + "=" * 70)
-    print("Starting optimized training...")
+    print("Starting V3 Model Training...")
     print("=" * 70)
     best_val_loss = float('inf')
     
@@ -420,7 +410,7 @@ def train(config):
         train_loss = train_epoch(model, train_loader, criterion, optimizer, scaler, 
                                 config.DEVICE, config, epoch, ema)
         
-        # Check if training produced NaN
+        # Check for NaN
         if np.isnan(train_loss) or np.isinf(train_loss):
             print(f"\n{'='*70}")
             print(f"CRITICAL ERROR: Training produced {'NaN' if np.isnan(train_loss) else 'Inf'} loss!")
@@ -436,7 +426,7 @@ def train(config):
         else:
             val_loss, val_mae = validate(model, val_loader, criterion, config.DEVICE, config, epoch)
         
-        # Check if validation produced NaN
+        # Check for NaN
         if np.isnan(val_loss) or np.isinf(val_loss):
             print(f"\n{'='*70}")
             print(f"CRITICAL ERROR: Validation produced {'NaN' if np.isnan(val_loss) else 'Inf'} loss!")
@@ -486,7 +476,7 @@ def train(config):
     save_checkpoint(model, optimizer, scheduler, epoch, train_loss, val_loss, 
                    config, 'final_model.pt', ema)
     
-    # Test on test set with EMA if available
+    # Test on test set
     print("\n" + "=" * 70)
     print("Evaluating on test set...")
     print("=" * 70)
@@ -502,20 +492,22 @@ def train(config):
     
     writer.close()
     print("\n" + "=" * 70)
-    print("Training completed successfully!")
+    print("V3 Model Training completed successfully!")
     print("=" * 70)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Train EEG Source Localization Transformer (Optimized)')
+    parser = argparse.ArgumentParser(description='Train with Enhanced Transformer V3 Model')
     parser.add_argument('--config', type=str, default='optimized', 
                        choices=['optimized', 'balanced', 'conservative'],
                        help='Configuration to use')
+    parser.add_argument('--model_size', type=str, default='default',
+                       choices=['small', 'default', 'large'],
+                       help='V3 model size: small (3.5M), default (18M), large (65M)')
     parser.add_argument('--data_dir', type=str, default=None, help='Path to data directory')
     parser.add_argument('--batch_size', type=int, default=None, help='Batch size')
     parser.add_argument('--epochs', type=int, default=None, help='Number of epochs')
     parser.add_argument('--lr', type=float, default=None, help='Learning rate')
-    parser.add_argument('--resume', type=str, default=None, help='Path to checkpoint to resume from')
     
     args = parser.parse_args()
     
@@ -536,9 +528,7 @@ if __name__ == "__main__":
         Config.NUM_EPOCHS = args.epochs
     if args.lr is not None:
         Config.LEARNING_RATE = args.lr
-    if args.resume is not None:
-        Config.RESUME_CHECKPOINT = args.resume
     
     # Start training
-    train(Config)
+    train(Config, model_size=args.model_size)
 
