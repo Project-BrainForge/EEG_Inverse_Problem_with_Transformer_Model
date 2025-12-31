@@ -1,0 +1,256 @@
+================================================================================
+VISUALIZATION SETUP COMPLETE!
+================================================================================
+
+I've created a complete visualization system for your EEG transformer predictions.
+
+================================================================================
+WHAT WAS CREATED
+================================================================================
+
+MATLAB Scripts (in misc_scripts/):
+  ✓ visualize_transformer_predictions.m  - Main visualization (multiple samples)
+  ✓ visualize_single_prediction.m        - Quick single sample viewer
+  ✓ compare_predictions.m                - Compare different models
+  ✓ inspect_anatomy_data.m               - Explore anatomy data
+  ✓ test_visualization.m                 - Test your setup
+
+Documentation:
+  ✓ HOW_TO_VISUALIZE.md                  - Step-by-step tutorial (START HERE!)
+  ✓ VISUALIZATION_QUICKSTART.txt         - Quick reference card
+  ✓ misc_scripts/VISUALIZATION_GUIDE.md  - Comprehensive guide with examples
+  ✓ misc_scripts/README_VISUALIZATION.md - Script documentation
+  ✓ README.md                            - Updated with visualization section
+
+================================================================================
+QUICK START (3 STEPS)
+================================================================================
+
+1. Open MATLAB and navigate to your project:
+   >> cd D:\fyp\EEG_Inverse_Problem_with_Transformer_Model\misc_scripts
+
+2. Test your setup:
+   >> test_visualization
+
+3. Visualize your predictions:
+   >> visualize_transformer_predictions
+
+That's it! You should see your predictions on a 3D brain surface.
+
+================================================================================
+WHAT EACH SCRIPT DOES
+================================================================================
+
+test_visualization.m
+  - Checks if all required files exist
+  - Verifies data can be loaded
+  - Tests visualization function
+  - Run this FIRST to make sure everything is ready
+
+inspect_anatomy_data.m
+  - Shows cortex geometry (20,484 vertices)
+  - Displays region mapping (994 regions)
+  - Visualizes brain from multiple angles
+  - Good for understanding your data
+
+visualize_transformer_predictions.m
+  - Main visualization script
+  - Shows first 5 samples in a subplot
+  - Converts 994 regions → 20,484 vertices
+  - Prints statistics
+  - Customizable parameters
+
+visualize_single_prediction.m
+  - Quick function to view one sample
+  - Usage: visualize_single_prediction(1)
+  - Good for interactive exploration
+
+compare_predictions.m
+  - Compare predictions from different models
+  - Side-by-side visualization
+  - Difference maps and correlations
+  - Good for model evaluation
+
+================================================================================
+YOUR DATA FLOW
+================================================================================
+
+Python (eval_real.py):
+  Input: EEG data (75 channels, 500 time points)
+  Output: transformer_predictions_best_model.mat
+          Shape: (num_samples, 994 regions)
+
+MATLAB (visualization scripts):
+  1. Load predictions: (num_samples, 994 regions)
+  2. Load region mapping: maps 20,484 vertices → 994 regions
+  3. Convert: (num_samples, 994) → (num_samples, 20,484 vertices)
+  4. Visualize: Plot on 3D cortex surface
+
+Result: Beautiful 3D brain visualization!
+
+================================================================================
+REQUIRED FILES (Should Already Exist)
+================================================================================
+
+Anatomy files (in anatomy/):
+  ✓ fs_cortex_20k.mat                    - Cortex geometry
+  ✓ fs_cortex_20k_region_mapping.mat     - Region mapping
+
+Prediction files (in source/VEP/):
+  ✓ transformer_predictions_best_model.mat - Your model output
+  ✓ transformer_predictions_data1_uploaded.mat
+  ✓ transformer_predictions_data2_uploaded.mat
+  ✓ transformer_predictions_data3_uploaded.mat
+
+================================================================================
+CUSTOMIZATION
+================================================================================
+
+To customize visualization, edit visualize_transformer_predictions.m:
+
+Line 18: Change prediction file
+  prediction_file = '../source/VEP/YOUR_FILE.mat';
+
+Lines 24-29: Adjust visualization
+  num_samples_to_show = 10;   % Show more samples
+  subplot_rows = 2;           % 2 rows
+  subplot_cols = 5;           % 5 columns
+  face_alpha = 0.9;           % Less transparent (0-1)
+  threshold = 0.2;            % Higher threshold (0-1)
+  view_angle = [90, 0];       % Different camera angle
+
+Common view angles:
+  [-86, 17]  = Left lateral (default)
+  [86, 17]   = Right lateral
+  [0, 90]    = Top view
+  [0, 0]     = Front view
+  [180, 0]   = Back view
+
+================================================================================
+DOCUMENTATION
+================================================================================
+
+For detailed help, see:
+
+1. HOW_TO_VISUALIZE.md
+   - Step-by-step tutorial
+   - Troubleshooting guide
+   - Advanced examples
+   → START HERE if you're new!
+
+2. VISUALIZATION_QUICKSTART.txt
+   - Quick reference card
+   - Common commands
+   - Parameter options
+   → Keep this handy for quick lookups
+
+3. misc_scripts/VISUALIZATION_GUIDE.md
+   - Comprehensive guide
+   - Detailed examples
+   - All parameters explained
+   → Read this for advanced usage
+
+4. misc_scripts/README_VISUALIZATION.md
+   - Script documentation
+   - API reference
+   - File structure
+   → Reference for developers
+
+================================================================================
+COMMON TASKS
+================================================================================
+
+View a single sample:
+  >> visualize_single_prediction(1)
+
+View multiple samples:
+  >> visualize_transformer_predictions
+
+Compare two models:
+  >> compare_predictions  % (edit file first)
+
+Check your setup:
+  >> test_visualization
+
+Explore anatomy data:
+  >> inspect_anatomy_data
+
+Save a figure:
+  >> saveas(gcf, 'my_result.png')
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Error: "Cannot find file"
+  → Make sure you're in misc_scripts directory
+  → Run: cd D:\fyp\EEG_Inverse_Problem_with_Transformer_Model\misc_scripts
+
+Error: "Undefined function"
+  → Run: addpath('misc_scripts')
+
+No prediction files:
+  → Run eval_real.py first to generate predictions
+
+Tests fail:
+  → Run: test_visualization
+  → Check error messages
+  → See HOW_TO_VISUALIZE.md troubleshooting section
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. Read HOW_TO_VISUALIZE.md for detailed tutorial
+2. Run test_visualization.m to verify setup
+3. Run visualize_transformer_predictions to see your results
+4. Customize parameters as needed
+5. Save and share your visualizations!
+
+================================================================================
+TIPS
+================================================================================
+
+✓ Start with test_visualization.m to check everything
+✓ Use visualize_single_prediction(1) for quick tests
+✓ Adjust threshold to focus on strong activations
+✓ Try different view angles by rotating interactively
+✓ Save both .png (for papers) and .fig (for editing)
+✓ Compare different model checkpoints
+✓ Batch export all samples for presentations
+
+================================================================================
+SUPPORT
+================================================================================
+
+If you encounter issues:
+  1. Run test_visualization.m to diagnose
+  2. Check HOW_TO_VISUALIZE.md troubleshooting section
+  3. Verify file paths and data formats
+  4. Check MATLAB console for error messages
+
+For more examples and advanced usage:
+  - See VISUALIZATION_GUIDE.md
+  - See README_VISUALIZATION.md
+  - Check the example code in HOW_TO_VISUALIZE.md
+
+================================================================================
+SUMMARY
+================================================================================
+
+You now have:
+  ✓ 5 MATLAB scripts for visualization
+  ✓ 4 comprehensive documentation files
+  ✓ Complete workflow from predictions to 3D brain visualization
+  ✓ Examples for common tasks
+  ✓ Troubleshooting guides
+
+Everything is ready to use! Just open MATLAB and run:
+  >> cd misc_scripts
+  >> test_visualization
+  >> visualize_transformer_predictions
+
+Enjoy visualizing your EEG transformer predictions! 🧠✨
+
+================================================================================
+

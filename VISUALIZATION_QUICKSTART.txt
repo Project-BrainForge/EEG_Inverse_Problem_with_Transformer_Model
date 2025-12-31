@@ -1,0 +1,108 @@
+================================================================================
+QUICK START: Visualizing Transformer Predictions
+================================================================================
+
+You have run eval_real.py and generated predictions in:
+  source/VEP/transformer_predictions_best_model.mat
+
+Now visualize them in MATLAB:
+
+================================================================================
+STEP 1: Open MATLAB
+================================================================================
+
+Navigate to your project directory:
+  >> cd D:\fyp\EEG_Inverse_Problem_with_Transformer_Model\misc_scripts
+
+================================================================================
+STEP 2: Inspect Your Data (Optional)
+================================================================================
+
+To understand the anatomy data structure:
+  >> inspect_anatomy_data
+
+This will show you:
+  - Cortex geometry (20,484 vertices, triangles)
+  - Region mapping (994 regions)
+  - Leadfield matrix
+  - Electrode positions
+
+================================================================================
+STEP 3: Visualize Your Predictions
+================================================================================
+
+Option A - Visualize multiple samples (recommended):
+  >> visualize_transformer_predictions
+
+  This shows the first 5 samples in a subplot.
+
+Option B - Visualize a single sample:
+  >> visualize_single_prediction(1)    % Sample 1
+  >> visualize_single_prediction(5)    % Sample 5
+
+================================================================================
+STEP 4: Customize (Optional)
+================================================================================
+
+Edit visualize_transformer_predictions.m to change:
+
+Line 18: Change prediction file
+  prediction_file = '../source/VEP/YOUR_FILE.mat';
+
+Line 24-29: Adjust visualization
+  num_samples_to_show = 10;   % Show more samples
+  subplot_rows = 2;           % 2 rows
+  subplot_cols = 5;           % 5 columns  
+  face_alpha = 0.9;           % Less transparent
+  threshold = 0.2;            % Higher threshold
+  view_angle = [90, 0];       % Different angle
+
+================================================================================
+FILES CREATED FOR YOU
+================================================================================
+
+misc_scripts/
+  ├── visualize_transformer_predictions.m  <- Main script (multiple samples)
+  ├── visualize_single_prediction.m        <- Quick single sample viewer
+  ├── inspect_anatomy_data.m               <- Explore anatomy data
+  ├── visualize_result.m                   <- Core visualization function
+  └── VISUALIZATION_GUIDE.md               <- Detailed documentation
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Error: "Cannot find file"
+  -> Make sure you're in misc_scripts directory
+  -> Check file paths in the script
+
+Error: "Undefined function"
+  -> Run: addpath('misc_scripts')
+
+Predictions look wrong
+  -> Check statistics printed by the script
+  -> Try threshold = 0 to see all values
+  -> Try different normalization settings
+
+================================================================================
+COMMON VIEW ANGLES
+================================================================================
+
+  [-86, 17]   Left lateral (default)
+  [86, 17]    Right lateral
+  [0, 90]     Top view
+  [0, 0]      Front view
+  [180, 0]    Back view
+
+================================================================================
+SAVE FIGURES
+================================================================================
+
+In MATLAB after visualization:
+  >> saveas(gcf, 'my_result.png')
+  >> saveas(gcf, 'my_result.fig')
+
+Or edit the script to auto-save (see VISUALIZATION_GUIDE.md)
+
+================================================================================
+

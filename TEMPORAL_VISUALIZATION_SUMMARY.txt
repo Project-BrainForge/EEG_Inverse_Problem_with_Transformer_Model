@@ -1,0 +1,343 @@
+================================================================================
+TEMPORAL VISUALIZATION SUMMARY
+================================================================================
+
+Your EEG transformer predictions may have temporal data (500 timepoints per
+sample). Here's how to visualize all 500 timepoints!
+
+================================================================================
+THREE WAYS TO VISUALIZE 500 TIMEPOINTS
+================================================================================
+
+1. GRID VIEW - Show multiple timepoints in subplots
+   ✓ Quick overview
+   ✓ Easy comparison
+   ✓ Good for publications
+
+2. CUSTOM SELECTION - Choose specific timepoints
+   ✓ Focused analysis
+   ✓ Control which times to show
+   ✓ Perfect for key moments
+
+3. ANIMATION - Video with all timepoints
+   ✓ Complete temporal evolution
+   ✓ Great for presentations
+   ✓ Shows full dynamics
+
+================================================================================
+NEW SCRIPTS CREATED
+================================================================================
+
+misc_scripts/visualize_timepoints.m
+  → Show N evenly-spaced timepoints in a grid
+  → Usage: visualize_timepoints(1, 16)
+
+misc_scripts/visualize_selected_timepoints.m
+  → Show custom selection of timepoints
+  → Usage: visualize_selected_timepoints(1, 1:50:500)
+
+misc_scripts/visualize_all_timepoints_animation.m
+  → Create video with all 500 timepoints
+  → Usage: visualize_all_timepoints_animation(1)
+
+misc_scripts/TEMPORAL_VISUALIZATION_GUIDE.md
+  → Comprehensive guide with examples
+
+misc_scripts/TEMPORAL_QUICKSTART.txt
+  → Quick reference card
+
+================================================================================
+QUICK START (3 STEPS)
+================================================================================
+
+Step 1: Open MATLAB
+  >> cd D:\fyp\EEG_Inverse_Problem_with_Transformer_Model\misc_scripts
+
+Step 2: Check your data shape
+  >> pred_data = load('../source/VEP/transformer_predictions_best_model.mat');
+  >> size(pred_data.all_out)
+
+Step 3: Visualize based on shape
+
+  If (num_samples, 994):
+    → Single timepoint data
+    → Use: visualize_single_prediction(1)
+
+  If (num_samples, 500, 994):
+    → Temporal data! ✓
+    → Use: visualize_timepoints(1, 16)
+
+================================================================================
+EXAMPLES
+================================================================================
+
+Grid View (16 timepoints):
+  >> visualize_timepoints(1, 16)
+
+Every 50th timepoint:
+  >> visualize_selected_timepoints(1, 1:50:500)
+
+Key timepoints:
+  >> visualize_selected_timepoints(1, [1, 100, 200, 300, 400, 500])
+
+Full animation:
+  >> visualize_all_timepoints_animation(1)
+
+Save figure:
+  >> saveas(gcf, 'temporal_result.png')
+
+================================================================================
+WHICH METHOD TO USE?
+================================================================================
+
+FOR QUICK ANALYSIS:
+  >> visualize_timepoints(1, 16)        % 4x4 grid
+  → Fast, easy to compare timepoints
+
+FOR FOCUSED ANALYSIS:
+  >> visualize_selected_timepoints(1, 1:50:500)
+  → Control exactly which timepoints to show
+
+FOR PRESENTATIONS:
+  >> visualize_all_timepoints_animation(1)
+  → Smooth video showing temporal evolution
+
+FOR PUBLICATIONS:
+  >> visualize_selected_timepoints(1, [1, 100, 200, 300, 400, 500])
+  >> saveas(gcf, 'figure.png')
+  → Clean figure with key timepoints
+
+================================================================================
+DATA SHAPES EXPLAINED
+================================================================================
+
+(num_samples, 994):
+  • Single timepoint per sample
+  • Use: visualize_single_prediction(1)
+  • Use: visualize_transformer_predictions
+
+(num_samples, 500, 994):
+  • Full temporal data (500 timepoints)
+  • Use: visualize_timepoints(1, 16)
+  • Use: visualize_selected_timepoints(1, 1:50:500)
+  • Use: visualize_all_timepoints_animation(1)
+
+================================================================================
+HOW IT WORKS
+================================================================================
+
+Your Data:
+  all_out: (num_samples, 500, 994)
+  → 500 timepoints, 994 regions each
+
+Processing:
+  For each timepoint:
+    1. Extract region values (994 regions)
+    2. Map to vertices (20,484 vertices)
+    3. Visualize on 3D cortex
+
+Result:
+  Multiple views showing temporal evolution!
+
+================================================================================
+COMMON TASKS
+================================================================================
+
+Show overview:
+  visualize_timepoints(1, 16)
+
+Show early response (0-200ms):
+  visualize_selected_timepoints(1, 1:10:100)
+
+Show late response (200-1000ms):
+  visualize_selected_timepoints(1, 100:25:500)
+
+Compare all samples:
+  for i = 1:5
+      visualize_timepoints(i, 16)
+      saveas(gcf, sprintf('sample_%d.png', i))
+  end
+
+Create presentation video:
+  visualize_all_timepoints_animation(1, '../presentation/demo.mp4')
+
+================================================================================
+CUSTOMIZATION
+================================================================================
+
+Number of timepoints:
+  visualize_timepoints(1, 9)      % 3x3 grid
+  visualize_timepoints(1, 16)     % 4x4 grid
+  visualize_timepoints(1, 20)     % 4x5 grid
+  visualize_timepoints(1, 25)     % 5x5 grid
+
+Specific times:
+  visualize_selected_timepoints(1, [1, 50, 100, 150, 200])
+
+View angle:
+  visualize_selected_timepoints(1, 1:50:500, [-86, 17])  % Left
+  visualize_selected_timepoints(1, 1:50:500, [86, 17])   % Right
+  visualize_selected_timepoints(1, 1:50:500, [0, 90])    % Top
+
+Animation speed (edit in script):
+  v.FrameRate = 30;    % Normal
+  v.FrameRate = 15;    % Slower
+  v.FrameRate = 60;    % Faster
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Error: "Expected 3D data"
+  → Your data is (N, 994) not (N, 500, 994)
+  → Solution: Use visualize_single_prediction(1)
+
+Want all 500 in one figure?
+  → 500 subplots is too many!
+  → Solution 1: visualize_selected_timepoints(1, 1:10:500)  % Every 10th
+  → Solution 2: visualize_all_timepoints_animation(1)       % Video
+
+Animation takes too long?
+  → Edit script: Change v.FrameRate = 30 to 15
+  → Or: Process every 2nd frame
+
+Out of memory?
+  → Reduce number of timepoints shown
+  → Close figures: close(gcf)
+
+================================================================================
+TIME INTERPRETATION
+================================================================================
+
+Assuming 2ms sampling (500 Hz):
+
+  Timepoint    Time
+  ---------    ----
+       1       0 ms
+      50       100 ms
+     100       200 ms
+     200       400 ms
+     250       500 ms
+     500       1000 ms
+
+Adjust labels in scripts if your sampling rate is different.
+
+================================================================================
+COMPLETE WORKFLOW
+================================================================================
+
+1. Check data shape:
+   >> pred_data = load('../source/VEP/transformer_predictions_best_model.mat');
+   >> size(pred_data.all_out)
+
+2. Quick overview:
+   >> visualize_timepoints(1, 16)
+
+3. Focused analysis:
+   >> visualize_selected_timepoints(1, 1:50:500)
+
+4. Create animation (optional):
+   >> visualize_all_timepoints_animation(1)
+
+5. Save results:
+   >> saveas(gcf, 'my_result.png')
+
+================================================================================
+DOCUMENTATION
+================================================================================
+
+Quick reference:
+  → TEMPORAL_QUICKSTART.txt (this folder)
+  → misc_scripts/TEMPORAL_QUICKSTART.txt
+
+Detailed guide:
+  → misc_scripts/TEMPORAL_VISUALIZATION_GUIDE.md
+
+Original visualization:
+  → HOW_TO_VISUALIZE.md
+  → VISUALIZATION_SUMMARY.txt
+
+================================================================================
+COMPARISON: TEMPORAL VS REGULAR
+================================================================================
+
+REGULAR VISUALIZATION (single timepoint):
+  Scripts: visualize_single_prediction.m
+           visualize_transformer_predictions.m
+  Data:    (num_samples, 994)
+  Shows:   One timepoint per sample
+
+TEMPORAL VISUALIZATION (500 timepoints):
+  Scripts: visualize_timepoints.m
+           visualize_selected_timepoints.m
+           visualize_all_timepoints_animation.m
+  Data:    (num_samples, 500, 994)
+  Shows:   Temporal evolution
+
+================================================================================
+ALL SCRIPTS OVERVIEW
+================================================================================
+
+Regular Visualization:
+  ✓ test_visualization.m                Test setup
+  ✓ inspect_anatomy_data.m              Explore data
+  ✓ visualize_single_prediction.m       Single sample
+  ✓ visualize_transformer_predictions.m Multiple samples
+  ✓ compare_predictions.m               Compare models
+
+Temporal Visualization:
+  ✓ visualize_timepoints.m              Grid view (NEW!)
+  ✓ visualize_selected_timepoints.m     Custom selection (NEW!)
+  ✓ visualize_all_timepoints_animation.m Animation (NEW!)
+
+================================================================================
+TIPS
+================================================================================
+
+✓ Start with visualize_timepoints(1, 16) for quick overview
+✓ Use visualize_selected_timepoints for focused analysis
+✓ Create animations for presentations
+✓ Adjust threshold in scripts to focus on strong activation
+✓ Try different view angles: left, right, top, front
+✓ Save both .png and .fig formats
+✓ Compare different samples at same timepoints
+✓ Use every Nth timepoint (e.g., 1:10:500) for overview
+
+================================================================================
+GETTING HELP
+================================================================================
+
+For detailed instructions:
+  → Read: misc_scripts/TEMPORAL_VISUALIZATION_GUIDE.md
+
+For quick lookup:
+  → Read: misc_scripts/TEMPORAL_QUICKSTART.txt
+
+For examples:
+  → See examples section in guide
+
+For troubleshooting:
+  → See troubleshooting section in guide
+
+================================================================================
+SUMMARY
+================================================================================
+
+You now have THREE ways to visualize all 500 timepoints:
+
+1. Grid View:       visualize_timepoints(1, 16)
+2. Custom:          visualize_selected_timepoints(1, 1:50:500)
+3. Animation:       visualize_all_timepoints_animation(1)
+
+Plus comprehensive documentation:
+  ✓ TEMPORAL_VISUALIZATION_GUIDE.md
+  ✓ TEMPORAL_QUICKSTART.txt
+
+Just run:
+  >> cd misc_scripts
+  >> visualize_timepoints(1, 16)
+
+Enjoy temporal visualization! 🧠⏱️✨
+
+================================================================================
+

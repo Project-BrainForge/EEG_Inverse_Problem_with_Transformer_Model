@@ -1,0 +1,201 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                  EEG TRANSFORMER VISUALIZATION                             ║
+║                        QUICK REFERENCE CARD                                ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ GETTING STARTED (3 COMMANDS)                                               │
+└────────────────────────────────────────────────────────────────────────────┘
+
+  >> cd D:\fyp\EEG_Inverse_Problem_with_Transformer_Model\misc_scripts
+  >> test_visualization
+  >> visualize_transformer_predictions
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ MAIN COMMANDS                                                              │
+└────────────────────────────────────────────────────────────────────────────┘
+
+  test_visualization                    Check if everything is ready
+  inspect_anatomy_data                  Explore anatomy data structure
+  visualize_transformer_predictions     Visualize first 5 samples
+  visualize_single_prediction(N)        Visualize sample N
+  compare_predictions                   Compare multiple models
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ QUICK EXAMPLES                                                             │
+└────────────────────────────────────────────────────────────────────────────┘
+
+  View sample 1:
+    >> visualize_single_prediction(1)
+
+  View sample 3:
+    >> visualize_single_prediction(3)
+
+  View first 5 samples:
+    >> visualize_transformer_predictions
+
+  Save current figure:
+    >> saveas(gcf, 'my_result.png')
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ KEY PARAMETERS (edit in script)                                           │
+└────────────────────────────────────────────────────────────────────────────┘
+
+  num_samples_to_show = 5;     Number of samples to display
+  face_alpha = 0.8;            Transparency (0=transparent, 1=opaque)
+  threshold = 0.1;             Activation threshold (0-1)
+  view_angle = [-86, 17];      Camera angle [azimuth, elevation]
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ COMMON VIEW ANGLES                                                         │
+└────────────────────────────────────────────────────────────────────────────┘
+
+  [-86, 17]    Left lateral (default)
+  [86, 17]     Right lateral
+  [0, 90]      Top view
+  [0, 0]       Front view
+  [180, 0]     Back view
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ FILE LOCATIONS                                                             │
+└────────────────────────────────────────────────────────────────────────────┘
+
+  Predictions:  source/VEP/transformer_predictions_best_model.mat
+  Cortex:       anatomy/fs_cortex_20k.mat
+  Mapping:      anatomy/fs_cortex_20k_region_mapping.mat
+  Scripts:      misc_scripts/*.m
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ DATA DIMENSIONS                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+  EEG channels:         75
+  Time points:          500
+  Brain regions:        994 (model output)
+  Cortex vertices:      20,484 (for visualization)
+  Triangular faces:     40,960
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ TROUBLESHOOTING                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+  "Cannot find file"
+    → cd misc_scripts
+    → Check file paths
+
+  "Undefined function"
+    → addpath('misc_scripts')
+
+  No predictions
+    → Run eval_real.py first
+
+  Strange results
+    → Try threshold = 0
+    → Check statistics
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ SAVE FIGURES                                                               │
+└────────────────────────────────────────────────────────────────────────────┘
+
+  saveas(gcf, 'result.png')              Save as PNG
+  saveas(gcf, 'result.fig')              Save as MATLAB figure
+  print(gcf, 'result.png', '-dpng', '-r300')  High-res (300 DPI)
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ INTERACTIVE CONTROLS                                                       │
+└────────────────────────────────────────────────────────────────────────────┘
+
+  Rotate:       Click and drag
+  Zoom:         Scroll wheel or zoom tool
+  Pan:          Shift + click and drag
+  Reset view:   Double-click
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ DOCUMENTATION FILES                                                        │
+└────────────────────────────────────────────────────────────────────────────┘
+
+  HOW_TO_VISUALIZE.md                   Step-by-step tutorial (START HERE)
+  VISUALIZATION_QUICKSTART.txt          This file
+  VISUALIZATION_SUMMARY.txt             Complete overview
+  misc_scripts/VISUALIZATION_GUIDE.md   Comprehensive guide
+  misc_scripts/README_VISUALIZATION.md  Script documentation
+  misc_scripts/WORKFLOW_DIAGRAM.txt     Visual workflow
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ WORKFLOW                                                                   │
+└────────────────────────────────────────────────────────────────────────────┘
+
+  1. Python:  eval_real.py → predictions (994 regions)
+  2. MATLAB:  Load anatomy data (cortex + region mapping)
+  3. MATLAB:  Convert 994 regions → 20,484 vertices
+  4. MATLAB:  Visualize on 3D brain surface
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ TIPS                                                                       │
+└────────────────────────────────────────────────────────────────────────────┘
+
+  ✓ Start with test_visualization.m
+  ✓ Use visualize_single_prediction(1) for quick tests
+  ✓ Adjust threshold to focus on strong activations
+  ✓ Rotate view interactively to see all angles
+  ✓ Save both .png and .fig formats
+  ✓ Compare different model checkpoints
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ CUSTOMIZATION EXAMPLE                                                      │
+└────────────────────────────────────────────────────────────────────────────┘
+
+  Edit visualize_transformer_predictions.m:
+
+    % Line 18: Change prediction file
+    prediction_file = '../source/VEP/YOUR_FILE.mat';
+
+    % Lines 24-29: Adjust parameters
+    num_samples_to_show = 10;   % Show 10 samples
+    subplot_rows = 2;           % 2 rows
+    subplot_cols = 5;           % 5 columns
+    threshold = 0.2;            % Higher threshold
+    view_angle = [90, 0];       % Right view
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ ADVANCED: BATCH EXPORT                                                     │
+└────────────────────────────────────────────────────────────────────────────┘
+
+  % Export all samples as images
+  for i = 1:num_samples
+      visualize_single_prediction(i);
+      saveas(gcf, sprintf('sample_%03d.png', i));
+      close(gcf);
+  end
+
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ NEED MORE HELP?                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+  Read:  HOW_TO_VISUALIZE.md (detailed tutorial)
+  Read:  VISUALIZATION_GUIDE.md (comprehensive examples)
+  Run:   test_visualization (diagnose issues)
+
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║  COMPLETE WORKFLOW IN 3 LINES:                                            ║
+║    >> cd misc_scripts                                                      ║
+║    >> test_visualization                                                   ║
+║    >> visualize_transformer_predictions                                    ║
+╚════════════════════════════════════════════════════════════════════════════╝
+

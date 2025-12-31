@@ -177,6 +177,8 @@ def evaluate_real_data(args):
                 data = preprocess_eeg(data, normalize=args.normalize)
                 
                 test_data.append(data)
+                print("data is", data)
+            
                 file_names.append(os.path.basename(file_path))
                 
                 if (i + 1) % 10 == 0:
@@ -207,11 +209,14 @@ def evaluate_real_data(args):
                 for i in range(0, len(test_data), args.batch_size):
                     batch = data_tensor[i:i+args.batch_size]
                     predictions = model(batch)
+                    print("predictions is", predictions)
                     all_predictions.append(predictions.cpu().numpy())
                 all_out = np.concatenate(all_predictions, axis=0)
             else:
                 predictions = model(data_tensor)
+                print("predictions is", predictions)
                 all_out = predictions.cpu().numpy()
+                print("all_out is", all_out)
         
         inference_time = time.time() - inference_start
         print(f"Inference complete: {inference_time:.2f}s")
